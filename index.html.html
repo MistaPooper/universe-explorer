@@ -1,0 +1,330 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Event Horizon — Cosmos &amp; Physics Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#02030a;--fg:#e8ecff;--mut:#8d96c4;--ac:#ffb86b;--gl:rgba(9,12,30,.66);--ln:rgba(150,170,255,.2);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:13px/1.45 Inter,system-ui,sans-serif;overflow:hidden}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+h1{position:fixed;left:calc(18px + env(safe-area-inset-left,0px));top:calc(14px + env(safe-area-inset-top,0px));margin:0;font:600 25px/1 "Cormorant Garamond",Georgia,serif;letter-spacing:.34em;text-shadow:0 0 20px #000;pointer-events:none}
+h1 small{display:block;margin-top:7px;font:400 9px Inter,system-ui,sans-serif;letter-spacing:.2em;color:var(--mut);text-transform:uppercase}
+#ui,.pn{position:fixed;left:12px;top:calc(68px + env(safe-area-inset-top,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));width:330px;max-width:calc(100% - 24px);overflow:auto;background:var(--gl);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid var(--ln);border-radius:16px;padding:4px 14px}
+details{border-bottom:1px solid var(--ln);padding:9px 0}details:last-child{border:0}
+summary{cursor:pointer;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ac)}
+.row{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+button{font:inherit;color:var(--fg);background:rgba(120,140,255,.08);border:1px solid var(--ln);border-radius:999px;padding:5px 11px;cursor:pointer}
+button.on{background:var(--ac);color:#1a0f00;border-color:var(--ac)}
+input[type=range]{width:100%;accent-color:var(--ac);margin:8px 0 0}
+label{display:block;margin-top:8px}.ck{display:inline-block;margin-right:14px}
+dl{display:grid;grid-template-columns:1fr auto;gap:5px 10px;margin:9px 0 0;font-size:12px}dt{color:var(--mut)}dd{margin:0;text-align:right}
+.nt,ol{font-size:11px;color:var(--mut)}ol{padding-left:16px;margin:9px 0}li{margin-bottom:5px}
+@media(max-width:700px){#ui,.pn{top:auto;height:44%;right:12px;width:auto;max-width:none}h1{font-size:20px}}
+[hidden]{display:none!important}
+#tabs{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:14px;display:flex;gap:6px;z-index:2}
+input[type=text]{width:100%;box-sizing:border-box;margin-top:8px;background:rgba(120,140,255,.08);border:1px solid var(--ln);border-radius:10px;color:var(--fg);padding:8px 10px;font:13px ui-monospace,Menlo,monospace}
+@media(max-width:700px){#tabs{top:calc(50px + env(safe-area-inset-top,0px));left:12px;right:12px;overflow-x:auto}#tabs button{white-space:nowrap}}
+</style></head><body>
+<canvas id="c"></canvas><canvas id="v" style="display:none"></canvas><nav id="tabs"></nav>
+<h1>EVENT HORIZON<small>Cosmos &amp; theoretical physics explorer</small></h1>
+<aside id="ui">
+<details open><summary>Object</summary><div class="row" id="pre"></div></details>
+<details open><summary>Mass</summary><input id="m" type="range" min="0" max="11" step=".01" value="6.633" aria-label="Mass, log10 of solar masses"><div class="nt" id="mv"></div></details>
+<details open><summary>Spacetime &amp; physics</summary>
+<div class="row" id="sp"><button data-v="0" class="on">Black hole</button><button data-v="1">White hole</button></div>
+<div class="row" id="ph"><button data-v="0" class="on">General relativity</button><button data-v="1">Quantum (Hawking)</button></div>
+<p class="nt" id="nt"></p></details>
+<details open><summary>View</summary>
+<label>Camera distance <b id="dv"></b><input id="d" type="range" min="3" max="60" step=".1" value="18"></label>
+<label class="ck"><input id="st" type="checkbox" checked> Orbiting star</label><label class="ck"><input id="au" type="checkbox" checked> Auto-orbit</label>
+<p class="nt">Drag to orbit · scroll to zoom</p></details>
+<details open><summary>Readout</summary><dl id="rd"></dl></details>
+<details><summary>Sources &amp; limits</summary><ol>
+<li>Einstein 1915, <i>Die Feldgleichungen der Gravitation</i>, Sitzungsber. Preuss. Akad. Wiss., 844.</li>
+<li>Schwarzschild 1916, Sitzungsber. Preuss. Akad. Wiss., 189 — exact solution: r<sub>s</sub>, photon sphere, ISCO.</li>
+<li>Kruskal 1960, Phys. Rev. 119, 1743 — maximal extension containing the white-hole region.</li>
+<li>Penrose 1965, Phys. Rev. Lett. 14, 57 (Nobel 2020) — black holes as a robust prediction of GR.</li>
+<li>Bekenstein 1973, Phys. Rev. D 7, 2333; Hawking 1974, Nature 248, 30; Hawking 1975, Commun. Math. Phys. 43, 199 — entropy, temperature, evaporation.</li>
+<li>Shakura &amp; Sunyaev 1973, A&amp;A 24, 337 — thin-disk temperature profile.</li>
+<li>James, von Tunzelmann, Franklin &amp; Thorne 2015, Class. Quantum Grav. 32, 065001 — geodesic ray tracing (Thorne: Nobel 2017).</li>
+<li>Masses: Sgr A* 4.297×10<sup>6</sup> M☉ (GRAVITY 2022, A&amp;A 657, L12; Genzel &amp; Ghez, Nobel 2020); M87* 6.5×10<sup>9</sup> (EHT 2019, ApJL 875, L1); TON 618 ≈ 6.6×10<sup>10</sup> (Shemmer et al. 2004, ApJ 614, 547; a virial estimate — a C IV-based re-analysis, Ge et al. 2019, gives ≈ 4.1×10<sup>10</sup>); Cygnus X-1 21.2 (Miller-Jones et al. 2021, Science 371, 1046).</li></ol>
+<p class="nt">Simplifications: non-rotating hole (no Kerr spin); thin disk; camera rays use coordinate directions rather than a local static-observer frame, so the shadow looks larger than a true observer would see by 1/√(1−r<sub>s</sub>/r) (≈ 3% at 18 r<sub>s</sub>, ≈ 22% at 3 r<sub>s</sub>); approximate Doppler and gravitational shifts; disk colour is a false-colour mapping of T∝M<sup>−1/4</sup> at fixed Eddington ratio; animation is time-scaled; the 10 M☉ preset is illustrative, not a specific object.</p></details>
+</aside>
+<aside class="pn" id="p1" hidden>
+<details open><summary>Cosmology · ΛCDM</summary><div class="row" id="u0"></div>
+<label>H₀ <b id="uhv"></b> km/s/Mpc<input id="uh" type="range" min="50" max="100" step=".1" value="67.4"></label>
+<label>Ω<sub>m</sub> <b id="uov"></b><input id="uom" type="range" min="0" max="3" step=".005" value=".315"></label>
+<label>Ω<sub>Λ</sub> <b id="ulv"></b><input id="uol" type="range" min="0" max="1.5" step=".005" value=".685"></label>
+<label>Look-back redshift z <b id="uzv"></b><input id="uz" type="range" min=".01" max="10" step=".01" value="1"></label>
+<p class="nt">Cosmic time · <label class="ck" style="display:inline"><input id="up" type="checkbox" checked> play</label></p><input id="ut" type="range" min="0" max="1" step=".001" value=".2">
+<p class="nt">Friedmann 1922: H² = H₀²[Ω<sub>r</sub>(1+z)⁴ + Ω<sub>m</sub>(1+z)³ + Ω<sub>k</sub>(1+z)² + Ω<sub>Λ</sub>], Ω<sub>k</sub> = 1 − Ω<sub>r</sub> − Ω<sub>m</sub> − Ω<sub>Λ</sub>. The orange curve is a(t) integrated from it; the galaxy field is schematic.</p></details>
+<details open><summary>Readout</summary><dl id="ur"></dl></details>
+<details open><summary>At the cursor</summary><dl id="uc"></dl></details>
+<details><summary>Sources</summary><ol>
+<li>Friedmann 1922, Z. Phys. 10, 377 · Lemaître 1927, Ann. Soc. Sci. Bruxelles 47, 49 · Hubble 1929, PNAS 15, 168.</li>
+<li>Riess et al. 1998, AJ 116, 1009 · Perlmutter et al. 1999, ApJ 517, 565 (Nobel 2011) — accelerating expansion.</li>
+<li>Planck Collaboration 2018, A&amp;A 641, A6 (H₀ = 67.4, Ω<sub>m</sub> = 0.315) · Riess et al. 2022, ApJL 934, L7 (H₀ = 73.04: the Hubble tension).</li>
+<li>Hogg 1999, arXiv:astro-ph/9905116 — distance measures · Fixsen 2009, ApJ 707, 916 — T<sub>CMB</sub> = 2.7255 K.</li></ol>
+<p class="nt">"Closed" is an illustrative Friedmann model, not an observed universe. Ω<sub>r</sub> = 4.18×10⁻⁵/h² (photons + massless neutrinos).</p></details></aside>
+<aside class="pn" id="p2" hidden>
+<details open><summary>Galaxy</summary><div class="row" id="g0"></div><p class="nt" id="gi"></p><button id="gb" hidden>Open its central black hole →</button>
+<label>Inclination <b id="gav"></b>°<input id="ga" type="range" min="0" max="90" step="1" value="62"></label>
+<label>Time rate <b id="grv"></b> Myr/s<input id="gr" type="range" min="5" max="200" step="1" value="60"></label></details>
+<details open><summary>Model</summary><dl id="gd"></dl><p class="nt">Stars follow v(ρ) = v₀ρ/√(ρ²+1 kpc²). Spiral arms are a rigidly rotating density wave (Lin &amp; Shu 1964), so stars drift through them. Positions are a model, not a star catalogue; values without a citation are illustrative.</p></details>
+<details><summary>Sources</summary><ol>
+<li>GRAVITY 2019, A&amp;A 625, L10 (R₀ = 8.178 kpc) · Bland-Hawthorn &amp; Gerhard 2016, ARA&amp;A 54, 529 · Reid et al. 2019, ApJ 885, 131 · Reid et al. 2014, arXiv:1401.5377 (pitch angles 7–20°).</li>
+<li>Lin &amp; Shu 1964, ApJ 140, 646 · Hernquist 1990, ApJ 356, 359.</li>
+<li>Rubin &amp; Ford 1970, ApJ 159, 379 · McConnachie et al. 2005, MNRAS 356, 979 · van der Marel et al. 2012, ApJ (The M31 Velocity Vector II), arXiv:1205.6864.</li>
+<li>McQuinn et al. 2016, ApJ 826, 21 — M51 distance; McQuinn et al. 2016, ApJ — M104 distance · a 2023 A&amp;A study of M51 with Cepheids and SN 2005cs (doi:10.1051/0004-6361/202346971) · EHT Collaboration 2019, ApJL 875, L1 — M87 distance and black-hole mass.</li></ol></details></aside>
+<aside class="pn" id="p3" hidden>
+<details open><summary>Pulsar</summary><div class="row" id="p0"></div>
+<label>Period P <b id="ppv"></b><input id="pp" type="range" min="-3" max="1" step=".01" value="-1.476"></label>
+<label>Spin-down Ṗ <b id="pdv"></b><input id="pd" type="range" min="-20" max="-10" step=".01" value="-12.377"></label>
+<label>Magnetic tilt α <b id="pav"></b>°<input id="pa" type="range" min="0" max="90" step="1" value="45"></label>
+<label>Observer angle ζ <b id="pzv"></b>°<input id="pz" type="range" min="0" max="90" step="1" value="55"></label></details>
+<details open><summary>Derived</summary><dl id="pr"></dl><p class="nt">Rotating-lighthouse model: cos γ = cos α cos ζ + sin α sin ζ cos φ; a pulse arrives when γ ≲ ρ (Radhakrishnan &amp; Cooke 1969). Rotation is slowed for visibility; I = 10⁴⁵ g cm². The P<sup>−1/2</sup> beam scaling follows from the polar-cap size; the 5.4° coefficient is an illustrative value between empirical cone fits.</p></details>
+<details><summary>Sources</summary><ol>
+<li>Hewish, Bell et al. 1968, Nature 217, 709 (Hewish: Nobel 1974) · Gold 1968, Nature 218, 731.</li>
+<li>Radhakrishnan &amp; Cooke 1969, Astrophys. Lett. 3, 225 · Rankin 1990, ApJ 352, 247 (ρ ∝ P<sup>−1/2</sup>) · Gil, Kijak &amp; Seiradakis 1993 (conal-beam fits 4.9° and 6.3° × P<sup>−1/2</sup>).</li>
+<li>Manchester et al. 2005, AJ 129, 1993 (ATNF catalogue: P, Ṗ) · Backer et al. 1982, Nature 300, 615 (first millisecond pulsar).</li></ol></details></aside>
+<aside class="pn" id="p4" hidden>
+<details open><summary>Formula</summary><input id="qe" type="text" spellcheck="false" autocomplete="off" aria-label="Formula"><p class="nt" id="qm"></p><div class="row" id="q0"></div>
+<label>a <b id="qav"></b><input id="qa" type="range" min="-10" max="10" step=".01" value="1"></label>
+<label>b <b id="qbv"></b><input id="qb" type="range" min="-10" max="10" step=".01" value="1"></label>
+<label>c <b id="qcv"></b><input id="qc" type="range" min="-10" max="10" step=".01" value="1"></label>
+<p class="nt">Variables x, y, t (time), a, b, c · constants pi, e · functions sin cos tan asin acos atan sinh cosh tanh exp ln log sqrt abs step · operators + − * / ^. Use y for a 2D field. Drag to pan, scroll to zoom.</p></details>
+<details><summary>About the presets</summary><p class="nt">Textbook results: Planck's law (λ in µm, a = T/1000 K, ×4 for display; Wien peak at 2898 µm·K/T); the Schwarzschild photon effective potential V = (1−2/x)L²/x² with x = rc²/GM, L = a (peak at x = 3); the Lorentz factor; gravitational time dilation √(1−r<sub>s</sub>/r); the flat-ΛCDM rate E(z) with a = Ω<sub>m</sub>; the hydrogen 1s radial probability 4r²e<sup>−2r</sup> (Bohr radii); Fraunhofer double slit; two-source interference; a two-mass Newtonian potential. Your own formulas are plotted exactly as typed.</p></details></aside>
+<script>
+const FS=`precision highp float;
+uniform vec2 R;uniform vec3 C,F,U,Rt;uniform float T,W,Q,S,K;
+float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float h3(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
+vec3 bb(float k){float t=clamp(k,1200.,40000.)/100.;vec3 c;
+c.r=t<=66.?1.:clamp(1.292936*pow(t-60.,-.1332047),0.,1.);
+c.g=t<=66.?clamp(.390081*log(t)-.631841,0.,1.):clamp(1.129891*pow(t-60.,-.0755148),0.,1.);
+c.b=t>=66.?1.:t<=19.?0.:clamp(.543206*log(t-10.)-1.196254,0.,1.);return c;}
+vec3 sky(vec3 d){vec3 c=vec3(0);
+for(int k=0;k<3;k++){float s=45.+float(k)*50.;vec3 p=d*s,i=floor(p),f=fract(p)-.5;float r=h3(i+float(k)*7.);
+if(r>.92){vec3 o=vec3(h3(i+1.3),h3(i+2.7),h3(i+4.1))-.5;
+c+=bb(3200.+9000.*h3(i+9.))*smoothstep(.16,0.,length(f-o*.5))*(r-.92)*14.;}}
+float b=exp(-pow(dot(d,normalize(vec3(.3,.9,.35)))*4.,2.));
+return c+vec3(.42,.5,.9)*b*.09*(.5+h3(floor(d*140.)));}
+vec3 A(vec3 p,float hh){float r=length(p);return -1.5*hh*p/(r*r*r*r*r);}
+void main(){
+vec2 uv=(gl_FragCoord.xy*2.-R)/R.y;
+vec3 v=normalize(F+(uv.x*Rt+uv.y*U)*.6),p=C,cr=cross(C,v);
+float hh=dot(cr,cr),b=sqrt(hh)/2.598,rc=length(C),tr=1.,sg=W>.5?-1.:1.,a=T*.13;
+vec3 sp=9.*vec3(cos(a),.42*sin(a),.91*sin(a)),col=vec3(0),sc=bb(6500.),a0=A(p,hh);
+bool hit=false;
+for(int i=0;i<280;i++){
+float r=length(p);
+if(r<1.){hit=true;break;}
+if(r>90.&&dot(p,v)>0.)break;
+float dt=clamp(.03*r,.02,.6);
+vec3 vh=v+a0*dt*.5,pn=p+vh*dt,an=A(pn,hh),vn=vh+an*dt*.5;
+if(p.y*pn.y<0.){
+vec3 q=mix(p,pn,p.y/(p.y-pn.y));float rr=length(q.xz),x=rr/3.;
+if(rr>3.&&rr<16.){
+float tn=2.05*pow(x,-.75)*pow(max(1.-inversesqrt(x),0.),.25);
+float vo=sqrt(.5/(rr-1.));
+float g=sqrt(1.-vo*vo)/(1.+vo*dot(normalize(vec3(-q.z,0.,q.x))*sg,normalize(vn)))*sqrt(1.-1./rr)/sqrt(1.-1./rc);
+float ph=atan(q.z,q.x)-sg*5.*pow(rr,-1.5)*T;
+float m=(.6+.25*sin(2.*ph+5.*log(rr))+.15*sin(9.*ph-14.*log(rr)))*(.78+.22*sin(6.*rr+sg*T*1.2));
+float al=smoothstep(3.,3.12,rr)*smoothstep(16.,10.,rr)*(1.-.93*Q);
+col+=tr*al*bb(K*tn*g)*pow(tn*g,4.)*m*1.6;
+tr*=1.-.85*al;}}
+float d=length(pn-sp);col+=tr*S*sc*exp(-d*d/.2)*dt*2.2;
+p=pn;v=vn;a0=an;}
+if(hit){if(W>.5)col+=tr*vec3(.8,.9,1.)*1.5;}
+else col+=tr*sky(normalize(v));
+float e=exp(-abs(b-1.)*13.);
+col+=Q*e*vec3(.25,.5,1.)*.8;
+col+=Q*step(.987,h(floor(gl_FragCoord.xy/3.)+floor(T*8.)))*exp(-abs(b-1.)*4.)*vec3(.8,.9,1.)*2.;
+col+=(h(gl_FragCoord.xy+fract(T))-.5)*.02;
+col=1.-exp(-max(col,0.)*1.25);
+col*=1.-.3*dot(uv*.5,uv*.5);
+gl_FragColor=vec4(pow(col,vec3(.92)),1.);}`;
+const $=q=>document.querySelector(q),cv=$('#c'),gl=cv.getContext('webgl');
+const G=6.6743e-11,c=299792458,Ms=1.98847e30,hb=1.054571817e-34,kB=1.380649e-23;
+const f=x=>{const e=Math.floor(Math.log10(x));return e>-3&&e<5?(+x.toPrecision(3)).toString():(x/10**e).toFixed(2)+' × 10<sup>'+e+'</sup>'};
+const L=km=>{const au=km/1.495978707e8;return km<1e6?f(km)+' km':au<1e4?f(au)+' AU':f(km/9.4607e12)+' ly'};
+const P=[['Illustrative 10 M☉',10],['Cygnus X-1',21.2],['Sgr A*',4.297e6],['M87*',6.5e9],['TON 618',6.6e10]];
+const NT=[['Black hole: null geodesics of the Schwarzschild metric are integrated for every pixel (Schwarzschild 1916).','White hole: the time-reversed maximal extension (Kruskal 1960). Same exterior lensing, but matter and light leave the horizon and nothing enters. Purely theoretical, never observed.'],['General relativity: classical curved spacetime, no quantum effects.','Quantum: semi-classical Hawking radiation (1974/75). T and S are exact formulas; the halo and sparks are exaggerated for visibility. Not a full theory of quantum gravity.']];
+const s={yaw:.4,pit:.14,d:18,lm:Math.log10(4.297e6),W:0,Q:0,S:1,au:1,K:7000};
+const pb=P.map(([n,m])=>{const b=document.createElement('button');b.textContent=n;b.onclick=()=>{s.lm=Math.log10(m);$('#m').value=s.lm;upd()};$('#pre').append(b);return b});
+function upd(){
+const M=10**s.lm,kg=M*Ms,rs=2*G*kg/c**2/1e3,TH=hb*c**3/(8*Math.PI*G*kg*kB),Tp=1e7*(M/10)**-.25;
+s.K=Math.min(11000,Math.max(3200,3000+2500*Math.log10(Tp/1e4)));
+$('#mv').innerHTML=f(M)+' M☉ · '+f(kg)+' kg';
+const r=[['Schwarzschild radius r<sub>s</sub>',L(rs)],['Shadow diameter (5.196 r<sub>s</sub>)',L(5.196*rs)],['Photon sphere (1.5 r<sub>s</sub>)',L(1.5*rs)],['ISCO (3 r<sub>s</sub>)',L(3*rs)],['Hawking temperature',f(TH)+' K'],['Entropy S/k<sub>B</sub>',f(4*Math.PI*G*kg*kg/(hb*c))],['Evaporation time',f(5120*Math.PI*G*G*kg**3/(hb*c**4)/3.15576e7)+' yr'],['Disk inner T (scaling)',f(Tp)+' K'],['Clock at camera',(Math.sqrt(1-1/s.d)*100).toFixed(1)+'% of distant rate']];
+$('#rd').innerHTML=r.map(x=>'<dt>'+x[0]+'</dt><dd>'+x[1]+'</dd>').join('');
+$('#dv').textContent=s.d.toFixed(1)+' r_s';
+$('#nt').textContent=NT[0][s.W]+' '+NT[1][s.Q];
+pb.forEach((b,i)=>b.classList.toggle('on',Math.abs(Math.log10(P[i][1])-s.lm)<.005));}
+const seg=(id,k)=>{const g=$(id);g.onclick=e=>{const b=e.target.closest('button');if(!b)return;s[k]=+b.dataset.v;[...g.children].forEach(x=>x.classList.toggle('on',x===b));upd()}};
+seg('#sp','W');seg('#ph','Q');
+$('#m').oninput=e=>{s.lm=+e.target.value;upd()};
+$('#d').oninput=e=>{s.d=+e.target.value;upd()};
+$('#st').onchange=e=>s.S=+e.target.checked;$('#au').onchange=e=>s.au=+e.target.checked;
+if(innerWidth<700)document.querySelectorAll('details').forEach((d,i)=>d.open=i<2);
+upd();
+if(!gl){document.body.insertAdjacentHTML('beforeend','<p style="position:fixed;top:90px;left:20px">WebGL is required to run this simulation.</p>')}else{
+const sh=(t,src)=>{const o=gl.createShader(t);gl.shaderSource(o,src);gl.compileShader(o);return o};
+const pg=gl.createProgram();gl.attachShader(pg,sh(gl.VERTEX_SHADER,'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}'));gl.attachShader(pg,sh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(pg);gl.useProgram(pg);
+gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+const al=gl.getAttribLocation(pg,'p');gl.enableVertexAttribArray(al);gl.vertexAttribPointer(al,2,gl.FLOAT,false,0,0);
+const u={};['R','C','F','U','Rt','T','W','Q','S','K'].forEach(n=>u[n]=gl.getUniformLocation(pg,n));
+let sc=.6,fr=0,t0=performance.now(),T0=t0,dr=0,lx,ly;
+const rz=()=>{cv.width=Math.max(2,innerWidth*sc|0);cv.height=Math.max(2,innerHeight*sc|0);gl.viewport(0,0,cv.width,cv.height)};
+addEventListener('resize',rz);rz();
+cv.onpointerdown=e=>{dr=1;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId)};
+cv.onpointermove=e=>{if(!dr)return;s.yaw-=(e.clientX-lx)*.005;s.pit=Math.max(-1.45,Math.min(1.45,s.pit+(e.clientY-ly)*.005));lx=e.clientX;ly=e.clientY};
+cv.onpointerup=cv.onpointercancel=()=>dr=0;
+cv.onwheel=e=>{e.preventDefault();s.d=Math.max(3,Math.min(60,s.d*Math.exp(e.deltaY*.001)));$('#d').value=s.d;upd()};
+const cx=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],nm=a=>{const n=Math.hypot(...a);return a.map(x=>x/n)};
+function fm(now){
+if(SC){requestAnimationFrame(fm);return}
+if(s.au&&!dr)s.yaw+=.0012;
+const cp=Math.cos(s.pit),C=[s.d*cp*Math.sin(s.yaw),s.d*Math.sin(s.pit),s.d*cp*Math.cos(s.yaw)],F=nm(C.map(x=>-x)),Rt=nm(cx(F,[0,1,0])),U=cx(Rt,F);
+gl.uniform2f(u.R,cv.width,cv.height);gl.uniform3fv(u.C,C);gl.uniform3fv(u.F,F);gl.uniform3fv(u.U,U);gl.uniform3fv(u.Rt,Rt);
+gl.uniform1f(u.T,(now-T0)/1000);gl.uniform1f(u.W,s.W);gl.uniform1f(u.Q,s.Q);gl.uniform1f(u.S,s.S);gl.uniform1f(u.K,s.K);
+gl.drawArrays(gl.TRIANGLES,0,3);
+if(++fr==40){const fps=4e4/(now-t0);t0=now;fr=0;if(fps<26&&sc>.32){sc*=.86;rz()}else if(fps>56&&sc<1){sc=Math.min(1,sc*1.12);rz()}}
+requestAnimationFrame(fm)}
+requestAnimationFrame(fm)}
+let SC=0,GI,QI;const DR=[],cv2=$('#v'),x2=cv2.getContext('2d'),oc=document.createElement('canvas'),o2=oc.getContext('2d'),PN=[$('#ui'),$('#p1'),$('#p2'),$('#p3'),$('#p4')],HD={},ln=a=>a.map(r=>'<dt>'+r[0]+'</dt><dd>'+r[1]+'</dd>').join('');
+const rz2=()=>{cv2.width=innerWidth;cv2.height=innerHeight};addEventListener('resize',rz2);rz2();
+function tab(i){SC=i;cv.style.display=i?'none':'block';cv2.style.display=i?'block':'none';PN.forEach((p,j)=>p.hidden=j!=i);[...$('#tabs').children].forEach((b,j)=>b.classList.toggle('on',j==i))}
+const chips=(id,A,cb)=>A.forEach((n,i)=>{const b=document.createElement('button');b.textContent=n;b.onclick=()=>cb(i);$(id).append(b)});
+chips('#tabs',['Black hole','Universe','Galaxies','Pulsars','Playground'],tab);$('#tabs').children[0].classList.add('on');
+document.addEventListener('input',e=>{const h=HD[e.target.id];h&&h(+e.target.value,e.target)});
+if(innerWidth<700)document.querySelectorAll('.pn').forEach(p=>p.querySelector('details').open=true);
+/* Universe: Friedmann equation */
+const UP=[['Planck 2018',67.4,.315,.685],['SH0ES H₀',73.04,.315,.685],['Einstein–de Sitter',67.4,1,0],['Closed (illustrative)',67.4,2,0]];
+const UN={h:67.4,m:.315,l:.685,z:1,tc:.2,pl:1,n:0};let TA=[],AA=[];const UF=[];
+for(let i=0;i<700;i++){const r=3.4*Math.sqrt(Math.random()),p=Math.random()*6.2832;UF.push([r*Math.cos(p),r*Math.sin(p),Math.random()])}
+const E2=(a,o)=>o.r/a**4+o.m/a**3+o.k/a**2+o.l,ix=(A,v)=>{let i=1;while(i<A.length-1&&A[i]<v)i++;return i};
+const tOf=a=>{const i=ix(AA,a);return TA[i-1]+(TA[i]-TA[i-1])*(a-AA[i-1])/(AA[i]-AA[i-1])},aOf=t=>{const i=ix(TA,t);return AA[i-1]+(AA[i]-AA[i-1])*(t-TA[i-1])/(TA[i]-TA[i-1])};
+function dist(z){const o=UN.o,n=200,E=x=>Math.sqrt(Math.max(1e-12,E2(1/(1+x),o)));let s1=0,s2=0;
+for(let i=0;i<=n;i++){const x=z*i/n,w=i==0||i==n?1:i%2?4:2;s1+=w/E(x);s2+=w/((1+x)*E(x))}
+s1*=z/n/3;s2*=z/n/3;const dh=299792.458/UN.h,k=o.k;let dm=dh*s1;
+if(k>1e-6)dm=dh*Math.sinh(Math.sqrt(k)*s1)/Math.sqrt(k);else if(k<-1e-6)dm=dh*Math.sin(Math.sqrt(-k)*s1)/Math.sqrt(-k);
+return{dc:dh*s1,dl:dm*(1+z),da:dm/(1+z),tl:s2*UN.tH}}
+function uni(){const o={m:UN.m,l:UN.l,r:4.18e-5/(UN.h/100)**2};o.k=1-o.m-o.l-o.r;UN.o=o;UN.tH=977.792/UN.h;TA=[];AA=[];
+const N=500,la=Math.log(1e-5),d=(Math.log(5)-la)/N;let t=1e-10/(2*Math.sqrt(o.r)),ep=1/Math.sqrt(E2(1e-5,o));
+for(let i=0;i<=N;i++){const a=Math.exp(la+i*d),q=E2(a,o);if(q<=0)break;const e=1/Math.sqrt(q);if(i)t+=d*(e+ep)/2;ep=e;TA.push(t*UN.tH);AA.push(a)}
+const D=dist(UN.z),q0=o.r+o.m/2-o.l;
+$('#uhv').textContent=UN.h.toFixed(1);$('#uov').textContent=UN.m.toFixed(3);$('#ulv').textContent=UN.l.toFixed(3);$('#uzv').textContent=UN.z.toFixed(2);
+$('#ur').innerHTML=ln([['Age of the universe',AA[AA.length-1]>=1?f(tOf(1))+' Gyr':'recollapses first'],['Hubble time 1/H₀',f(UN.tH)+' Gyr'],['Curvature Ω<sub>k</sub>',o.k.toFixed(3)],['Deceleration q₀',q0.toFixed(2)+(q0<0?' (speeding up)':' (slowing)')],['Look-back time',f(D.tl)+' Gyr'],['Comoving distance',f(D.dc)+' Mpc'],['Luminosity distance',f(D.dl)+' Mpc'],['Angular-diameter dist.',f(D.da)+' Mpc']])}
+chips('#u0',UP.map(x=>x[0]),i=>{const p=UP[i];UN.h=p[1];UN.m=p[2];UN.l=p[3];$('#uh').value=p[1];$('#uom').value=p[2];$('#uol').value=p[3];uni()});
+HD.uh=v=>{UN.h=v;uni()};HD.uom=v=>{UN.m=v;uni()};HD.uol=v=>{UN.l=v;uni()};HD.uz=v=>{UN.z=v;uni()};
+HD.ut=v=>{UN.tc=v;UN.pl=0;$('#up').checked=false};HD.up=(v,e)=>UN.pl=+e.checked;uni();
+DR[1]=()=>{const W=cv2.width,H=cv2.height,mob=W<700;x2.fillStyle='#02030a';x2.fillRect(0,0,W,H);if(!TA.length)return;
+const tm=TA[TA.length-1],am=AA[AA.length-1];if(UN.pl){UN.tc=(UN.tc+.0006)%1;$('#ut').value=UN.tc}
+const tc=UN.tc*tm,a=aOf(tc),cx=mob?W/2:W*.6,cy=mob?H*.34:H*.5,k=Math.min(W,H)*(mob?.07:.1),gw=Math.max(0,1-a/.03);
+if(gw>0){x2.fillStyle='rgba(255,150,70,'+gw*.6+')';x2.fillRect(0,0,W,H)}
+x2.fillStyle='#bcd0ff';for(const g of UF){const al=Math.min(1,Math.max(0,(a-.06)*5))*(.3+.7*g[2]);if(al<.02)continue;x2.globalAlpha=al;x2.fillRect(cx+g[0]*a*k,cy+g[1]*a*k,2,2)}x2.globalAlpha=1;
+const pw=mob?W-32:Math.min(400,W*.32),ph=mob?110:190,x0=mob?16:W-pw-18,y0=mob?90:96;
+x2.fillStyle='rgba(8,11,28,.72)';x2.fillRect(x0-8,y0-22,pw+16,ph+40);
+x2.strokeStyle='#ffb86b';x2.lineWidth=2;x2.beginPath();AA.forEach((a_,i)=>{const X=x0+TA[i]/tm*pw,Y=y0+ph-a_/am*ph;i?x2.lineTo(X,Y):x2.moveTo(X,Y)});x2.stroke();
+const nx=x0+tOf(1)/tm*pw,ny=y0+ph-ph/am,cX=x0+UN.tc*pw,cY=y0+ph-a/am*ph;
+x2.fillStyle='#8d96c4';x2.font='11px Inter,system-ui,sans-serif';x2.fillText('scale factor a(t)',x0,y0-8);x2.fillText('0',x0,y0+ph+14);x2.fillText(Math.round(tm)+' Gyr',x0+pw-44,y0+ph+14);
+x2.strokeStyle='rgba(150,170,255,.5)';x2.lineWidth=1;x2.beginPath();x2.moveTo(cX,y0);x2.lineTo(cX,y0+ph);x2.stroke();
+x2.fillStyle='#fff';x2.beginPath();x2.arc(cX,cY,4,0,6.3);x2.fill();x2.fillStyle='#7fb2ff';x2.beginPath();x2.arc(nx,ny,4,0,6.3);x2.fill();x2.fillText('now',nx+7,ny+4);
+if(++UN.n%8==0){const z=1/a-1;$('#uc').innerHTML=ln([['Cosmic time',f(tc)+' Gyr'],['Scale factor a',a.toPrecision(3)],['Redshift z',z<1e3?z.toFixed(2):f(z)],['T<sub>CMB</sub> = 2.7255 K·(1+z)',f(2.7255/a)+' K']])}};
+/* Galaxies: density-wave model */
+const GX=[
+{n:'Milky Way',m:4,p:13,rd:2.6,rm:15,v:238,b:.3,i:62,sun:1,bh:4.297e6,t:'SBbc barred spiral. The Sun orbits ≈ 8.18 kpc from Sgr A* (GRAVITY 2019) at ≈ 238 ± 15 km/s; thin-disk scale length ≈ 2.6 ± 0.5 kpc (both Bland-Hawthorn & Gerhard 2016). Reid et al. (2019) find a four-arm spiral, with arm pitch angles of roughly 7–20° (Reid et al. 2014); the 13° used here is illustrative. The bar is not modelled.'},
+{n:'Andromeda (M31)',m:2,p:9,rd:5.3,rm:24,v:250,b:.35,i:77,t:'Spiral ≈ 0.78 Mpc away (McConnachie et al. 2005), inclined ≈ 77°, rotating at ≈ 250 km/s (Rubin & Ford 1970) and approaching the Milky Way at ≈ 109 km/s (van der Marel et al. 2012).'},
+{n:'Whirlpool (M51)',m:2,p:20,rd:4,rm:14,v:210,b:.2,i:22,t:'Grand-design spiral interacting with NGC 5195, ≈ 8.6 Mpc away by the tip-of-the-red-giant-branch method (McQuinn et al. 2016); Cepheid and supernova methods give ≈ 7.3–7.6 Mpc. The interaction is not modelled.'},
+{n:'Sombrero (M104)',m:0,p:0,rd:4,rm:12,v:300,b:.7,i:84,t:'Bulge-dominated disk seen almost edge-on, ≈ 9.55 Mpc away (McQuinn et al. 2016); its dust lane is not modelled.'},
+{n:'M87 (elliptical)',e:1,rm:12,v:0,b:1,i:0,bh:6.5e9,t:'Giant elliptical ≈ 16.8 Mpc away hosting a 6.5×10⁹ M☉ black hole (EHT 2019). Stars follow a Hernquist profile.'}];
+let GC=GX[0],GP=[],GA=62,GR=60;
+function gen(g){GC=g;GP=[];const R=Math.random;for(let k=0;k<6500;k++){let r,z=0,ty=0;
+if(g.e||R()<g.b){ty=1;const q=Math.sqrt(R()),rr=Math.min(g.rm,(g.e?3:.7)*q/(1-q+.002)),cs=2*R()-1;r=rr*Math.sqrt(1-cs*cs);z=rr*cs}
+else{do r=-g.rd*Math.log(R()*R());while(r>g.rm);z=(R()+R()+R()-1.5)*.5}
+GP.push([r,R()*6.2832,z,ty])}}
+function gsel(i){const g=GX[i];gen(g);GA=g.i;$('#ga').value=GA;$('#gav').textContent=GA;$('#gi').textContent=g.t;$('#gb').hidden=!g.bh;
+$('#gd').innerHTML=ln([['Rotation v₀',g.v?g.v+' km/s':'pressure-supported'],['Disk scale length',g.rd?g.rd+' kpc':'—'],['Spiral arms · pitch',g.m?g.m+' · '+g.p+'°':'none'],['Orbital period at 8.18 kpc',g.v?f(2*Math.PI*8180/(g.v*1.0227))+' Myr':'—']])}
+chips('#g0',GX.map(g=>g.n),gsel);
+$('#gb').onclick=()=>{s.lm=Math.log10(GC.bh);$('#m').value=s.lm;upd();tab(0)};
+HD.ga=v=>{GA=v;$('#gav').textContent=v};HD.gr=v=>{GR=v;$('#grv').textContent=v};$('#grv').textContent=60;gsel(0);
+DR[2]=T=>{const W=cv2.width,H=cv2.height,w=W>>1,h=H>>1,g=GC;if(!GI||GI.width!=w||GI.height!=h)GI=x2.createImageData(w,h);
+const d=GI.data,t=T*GR/1000,k=1.0227*g.v,Op=k/Math.sqrt((.55*g.rm)**2+1),an=GA*Math.PI/180,ci=Math.cos(an),si=Math.sin(an),S=Math.min(w,h)/(2.4*g.rm),tn=g.p?1/Math.tan(g.p*Math.PI/180):0;
+for(let i=0;i<d.length;i+=4){d[i]=3;d[i+1]=4;d[i+2]=12;d[i+3]=255}
+for(const p of GP){const r=p[0],ph=p[1]+k/Math.sqrt(r*r+1)*t;let m=.55,R_=255,G_=190,B_=120;
+if(!p[3]&&g.m){const q=.5+.5*Math.cos(g.m*(ph-Op*t+Math.log(r/1.5+.01)*tn));m=.12+.88*q*q;R_=255-125*q;G_=205-35*q;B_=140+115*q}
+const X=w/2+r*Math.cos(ph)*S,Y=h/2+(r*Math.sin(ph)*ci+p[2]*si)*S;if(X<0||Y<0||X>=w-1||Y>=h-1)continue;
+const j=((Y|0)*w+(X|0))*4,u=m*(g.e?.5:.9);d[j]+=R_*u;d[j+1]+=G_*u;d[j+2]+=B_*u}
+if(oc.width!=w||oc.height!=h){oc.width=w;oc.height=h}o2.putImageData(GI,0,0);x2.drawImage(oc,0,0,W,H);
+if(g.sun){const ph=2.6+1.0227*g.v/Math.sqrt(8.18**2+1)*t,X=W/2+8.18*Math.cos(ph)*S*2,Y=H/2+8.18*Math.sin(ph)*ci*S*2;x2.strokeStyle='#7fb2ff';x2.lineWidth=2;x2.beginPath();x2.arc(X,Y,7,0,6.3);x2.stroke();x2.fillStyle='#7fb2ff';x2.font='12px Inter,system-ui,sans-serif';x2.fillText('Sun',X+11,Y+4)}};
+/* Pulsars: rotating lighthouse */
+const PS=[['Crab',.0334,4.2e-13],['Vela',.0893,1.25e-13],['B1919+21',1.3373,1.35e-15],['B1937+21',.0015578,1.05e-19]],PU={P:.0334,D:4.2e-13,al:45,ze:55};
+function pup(){const P_=PU.P,rho=5.4/Math.sqrt(P_),Bs=3.2e19*Math.sqrt(P_*PU.D);
+$('#ppv').textContent=f(P_*1e3)+' ms';$('#pdv').innerHTML=f(PU.D);$('#pav').textContent=PU.al;$('#pzv').textContent=PU.ze;
+$('#pr').innerHTML=ln([['Surface field 3.2×10¹⁹√(PṖ)',f(Bs)+' G'],['Characteristic age P/2Ṗ',f(P_/(2*PU.D)/3.156e7)+' yr'],['Spin-down power 4π²IṖ/P³',f(4*Math.PI**2*1e45*PU.D/P_**3)+' erg/s'],['Light cylinder cP/2π',f(299792.458*P_/6.2832)+' km'],['Beam half-width ≈ 5.4°/√P (model)',rho.toFixed(1)+'°'],['Beam sweeps Earth?',Math.abs(PU.ze-PU.al)<rho?'yes — pulsar seen':'no — missed']])}
+const pset=(P_,D)=>{PU.P=P_;PU.D=D;$('#pp').value=Math.log10(P_);$('#pd').value=Math.log10(D);PU.ze=Math.min(90,Math.round(PU.al+.4*5.4/Math.sqrt(P_)));$('#pz').value=PU.ze;pup()};
+chips('#p0',PS.map(x=>x[0]),i=>pset(PS[i][1],PS[i][2]));
+HD.pp=v=>{PU.P=10**v;pup()};HD.pd=v=>{PU.D=10**v;pup()};HD.pa=v=>{PU.al=v;pup()};HD.pz=v=>{PU.ze=v;pup()};pup();
+DR[3]=T=>{const W=cv2.width,H=cv2.height,mob=W<700;x2.fillStyle='#02030a';x2.fillRect(0,0,W,H);
+const cx=mob?W/2:W*.6,cy=mob?H*.3:H*.46,R=Math.min(W,H)*(mob?.06:.07),P_=PU.P,fd=Math.min(1/P_,.4),ph=6.2832*fd*T,al=PU.al*Math.PI/180,ze=PU.ze*Math.PI/180,rho=5.4/Math.sqrt(P_)*Math.PI/180;
+const m=[Math.sin(al)*Math.cos(ph),Math.sin(al)*Math.sin(ph),Math.cos(al)],pr=v=>[v[1],Math.sin(ze)*v[2]-Math.cos(ze)*v[0],Math.sin(ze)*v[0]+Math.cos(ze)*v[2]];
+let e1=[-m[1],m[0],0];const n1=Math.hypot(e1[0],e1[1]);e1=n1>1e-6?[e1[0]/n1,e1[1]/n1,0]:[1,0,0];
+const e2=[m[1]*e1[2]-m[2]*e1[1],m[2]*e1[0]-m[0]*e1[2],m[0]*e1[1]-m[1]*e1[0]];
+x2.lineWidth=1;x2.strokeStyle='rgba(110,170,255,.35)';
+for(let q=0;q<6;q++){const ps=q*Math.PI/3;x2.beginPath();for(let j=0;j<=40;j++){const th=.573+j/40*(Math.PI-1.146),r=3.4*Math.sin(th)**2,lx=r*Math.sin(th)*Math.cos(ps),ly=r*Math.sin(th)*Math.sin(ps),lz=r*Math.cos(th),v=[0,1,2].map(i=>e1[i]*lx+e2[i]*ly+m[i]*lz),p=pr(v);j?x2.lineTo(cx+p[0]*R,cy-p[1]*R):x2.moveTo(cx+p[0]*R,cy-p[1]*R)}x2.stroke()}
+x2.strokeStyle='rgba(255,255,255,.3)';x2.beginPath();x2.moveTo(cx,cy-R*2.4);x2.lineTo(cx,cy+R*2.4);x2.stroke();
+const gr=x2.createRadialGradient(cx-R*.3,cy-R*.3,R*.1,cx,cy,R);gr.addColorStop(0,'#fff');gr.addColorStop(1,'#7fb2ff');x2.fillStyle=gr;x2.beginPath();x2.arc(cx,cy,R,0,6.3);x2.fill();
+x2.globalCompositeOperation='lighter';let Im=0;
+for(const sg of[1,-1]){const p=pr(m.map(x=>x*sg)),I=Math.exp(-((Math.acos(Math.max(-1,Math.min(1,p[2])))/rho)**2));Im=Math.max(Im,I);
+const Lb=R*8,tx=cx+p[0]*Lb,ty=cy-p[1]*Lb,dx=tx-cx,dy=ty-cy,n=Math.hypot(dx,dy)||1,wd=Lb*Math.tan(Math.min(rho,1.2))*.5,nx=-dy/n*wd,ny=dx/n*wd,gd=x2.createLinearGradient(cx,cy,tx,ty);
+gd.addColorStop(0,'rgba(130,200,255,'+(.15+.5*I)+')');gd.addColorStop(1,'rgba(130,200,255,0)');x2.fillStyle=gd;x2.beginPath();x2.moveTo(cx,cy);x2.lineTo(tx+nx,ty+ny);x2.lineTo(tx-nx,ty-ny);x2.closePath();x2.fill()}
+if(Im>.05){const g2=x2.createRadialGradient(cx,cy,R,cx,cy,R*6);g2.addColorStop(0,'rgba(180,225,255,'+.6*Im+')');g2.addColorStop(1,'rgba(180,225,255,0)');x2.fillStyle=g2;x2.fillRect(cx-R*6,cy-R*6,R*12,R*12)}
+x2.globalCompositeOperation='source-over';
+const pw=mob?W-32:Math.min(380,W*.3),hh=mob?90:110,x0=mob?16:W-pw-18,y0=mob?90:H-hh-48;
+x2.fillStyle='rgba(8,11,28,.72)';x2.fillRect(x0-8,y0-22,pw+16,hh+44);x2.strokeStyle='#ffb86b';x2.lineWidth=2;x2.beginPath();
+for(let j=0;j<=200;j++){const q=j/200*6.2832,cg=Math.cos(al)*Math.cos(ze)+Math.sin(al)*Math.sin(ze)*Math.cos(q),I=Math.exp(-((Math.acos(Math.max(-1,Math.min(1,cg)))/rho)**2)),X=x0+j/200*pw,Y=y0+hh-I*hh;j?x2.lineTo(X,Y):x2.moveTo(X,Y)}x2.stroke();
+const mx=x0+(ph%6.2832)/6.2832*pw;x2.strokeStyle='rgba(150,170,255,.6)';x2.lineWidth=1;x2.beginPath();x2.moveTo(mx,y0);x2.lineTo(mx,y0+hh);x2.stroke();
+x2.fillStyle='#8d96c4';x2.font='11px Inter,system-ui,sans-serif';x2.fillText('Pulse profile · real spin '+(1/P_).toPrecision(3)+' Hz, shown at '+fd.toFixed(2)+' Hz',x0,y0-8)};
+/* Playground: formula parser (no eval) */
+const FN=Object.assign(Object.create(null),{sin:Math.sin,cos:Math.cos,tan:Math.tan,asin:Math.asin,acos:Math.acos,atan:Math.atan,sinh:Math.sinh,cosh:Math.cosh,tanh:Math.tanh,exp:Math.exp,ln:Math.log,log:Math.log10,sqrt:Math.sqrt,abs:Math.abs,step:v=>v>0?1:0}),V=Object.assign(Object.create(null),{x:0,y:0,t:0,a:1,b:1,c:1,pi:Math.PI,e:Math.E});
+function cmp(src){const tk=src.toLowerCase().match(/\d*\.?\d+(?:e[+-]?\d+)?|[a-z_]\w*|\S/g)||[];let i=0;
+const pk=()=>tk[i],
+ad=()=>{let l=mu();while(pk()=='+'||pk()=='-'){const o=tk[i++],r=mu(),p=l;l=o=='+'?()=>p()+r():()=>p()-r()}return l},
+mu=()=>{let l=un();for(;;){const o=pk();if(o=='*'||o=='/'){i++;const r=un(),p=l;l=o=='*'?()=>p()*r():()=>p()/r()}else if(o&&/^[a-z_(\d.]/.test(o)){const r=un(),p=l;l=()=>p()*r()}else return l}},
+un=()=>{if(pk()=='-'){i++;const p=un();return()=>-p()}if(pk()=='+'){i++;return un()}return pw()},
+pw=()=>{const b=at();if(pk()=='^'){i++;const e=un();return()=>Math.pow(b(),e())}return b},
+at=()=>{const t=tk[i++];if(t===undefined)throw'unexpected end';if(/^[\d.]/.test(t)){const n=parseFloat(t);return()=>n}
+if(t=='('){const p=ad();if(tk[i++]!=')')throw'missing )';return p}
+if(FN[t]){if(tk[i++]!='(')throw t+' needs ( )';const p=ad();if(tk[i++]!=')')throw'missing )';const F=FN[t];return()=>F(p())}
+if(t in V)return()=>V[t];throw'unknown "'+t+'"'};
+const r=ad();if(i<tk.length)throw'unexpected "'+tk[i]+'"';return r}
+const Q={cx:0,cy:0,s:45,f:null,hm:0},QP=[
+['Wave','a*sin(b*x-c*t)',1,2,3,0,0,45],
+['Planck B(λ,T)','4*step(x)/(x^5*(exp(14.388/(x*a))-1))',5.8,0,0,1.7,.4,250],
+['Photon potential','step(x)*(1-2/x)*a^2/x^2',5,0,0,8,.5,50],
+['Lorentz γ','1/sqrt(1-x^2)',0,0,0,0,2.4,160],
+['Time dilation','step(x)*sqrt(1-1/x)',0,0,0,4,.5,80],
+['E(z)=H/H₀','sqrt(a*(1+x)^3+1-a)',.315,0,0,3,5,70],
+['H 1s radial','step(x)*4*x^2*exp(-2*x)',0,0,0,4,.3,100],
+['Double slit','cos(a*x)^2*(sin(b*x+1e-9)/(b*x+1e-9))^2',8,1.5,0,0,.5,80],
+['Two-source waves','sin(a*sqrt((x-2)^2+y^2)-c*t)+sin(a*sqrt((x+2)^2+y^2)-c*t)',3,0,3,0,0,45],
+['Two-mass potential','-1/sqrt((x-2)^2+y^2+.1)-1/sqrt((x+2)^2+y^2+.1)',0,0,0,0,0,45]];
+function qc(){const src=$('#qe').value;try{Q.f=cmp(src);Q.hm=/\by\b/i.test(src);$('#qm').textContent=Q.hm?'2D field f(x, y, t): orange +, blue −':'curve y = f(x, t)';$('#qm').style.color=''}catch(er){Q.f=null;$('#qm').textContent='⚠ '+er;$('#qm').style.color='#ff8a8a'}}
+const qs=i=>{const p=QP[i];$('#qe').value=p[1];['a','b','c'].forEach((k,j)=>{V[k]=p[2+j];$('#q'+k).value=p[2+j];$('#q'+k+'v').textContent=p[2+j]});Q.cx=p[5];Q.cy=p[6];Q.s=p[7];qc()};
+chips('#q0',QP.map(p=>p[0]),qs);$('#qe').oninput=qc;['a','b','c'].forEach(k=>HD['q'+k]=v=>{V[k]=v;$('#q'+k+'v').textContent=v});qs(0);
+let qd=0,qx,qy;cv2.onpointerdown=e=>{if(SC==4){qd=1;qx=e.clientX;qy=e.clientY;cv2.setPointerCapture(e.pointerId)}};
+cv2.onpointermove=e=>{if(qd){Q.cx-=(e.clientX-qx)/Q.s;Q.cy+=(e.clientY-qy)/Q.s;qx=e.clientX;qy=e.clientY}};cv2.onpointerup=()=>qd=0;
+cv2.onwheel=e=>{if(SC==4){e.preventDefault();Q.s*=Math.exp(-e.deltaY*.001)}};
+DR[4]=T=>{const W=cv2.width,H=cv2.height;V.t=T;x2.fillStyle='#02030a';x2.fillRect(0,0,W,H);
+if(Q.f&&Q.hm){const k=6,w=W/k|0,h=H/k|0;if(!QI||QI.width!=w||QI.height!=h)QI=x2.createImageData(w,h);const d=QI.data;
+for(let j=0;j<h;j++)for(let i=0;i<w;i++){V.x=(i*k-W/2)/Q.s+Q.cx;V.y=Q.cy-(j*k-H/2)/Q.s;const u=Math.tanh(Q.f()*.8),p=u>0?u:0,n=u<0?-u:0,o=(j*w+i)*4;d[o]=5+250*p+60*n;d[o+1]=6+140*p+130*n;d[o+2]=16+40*p+240*n;d[o+3]=255}
+if(oc.width!=w||oc.height!=h){oc.width=w;oc.height=h}o2.putImageData(QI,0,0);x2.drawImage(oc,0,0,W,H)}
+const raw=70/Q.s,p10=10**Math.floor(Math.log10(raw)),nn=raw/p10,st=nn<2?p10:nn<5?2*p10:5*p10,x1=Q.cx-W/2/Q.s,x3=Q.cx+W/2/Q.s,y1=Q.cy-H/2/Q.s,y3=Q.cy+H/2/Q.s;
+x2.font='10px Inter,system-ui,sans-serif';x2.lineWidth=1;
+for(let g=Math.ceil(x1/st);g*st<=x3;g++){const X=W/2+(g*st-Q.cx)*Q.s;x2.strokeStyle=g?'rgba(150,170,255,.12)':'rgba(150,170,255,.45)';x2.beginPath();x2.moveTo(X,0);x2.lineTo(X,H);x2.stroke();x2.fillStyle='#8d96c4';if(g)x2.fillText(+(g*st).toPrecision(3),X+3,Math.min(H-6,Math.max(12,H/2+Q.cy*Q.s-4)))}
+for(let g=Math.ceil(y1/st);g*st<=y3;g++){const Y=H/2-(g*st-Q.cy)*Q.s;x2.strokeStyle=g?'rgba(150,170,255,.12)':'rgba(150,170,255,.45)';x2.beginPath();x2.moveTo(0,Y);x2.lineTo(W,Y);x2.stroke();x2.fillStyle='#8d96c4';if(g)x2.fillText(+(g*st).toPrecision(3),Math.min(W-34,Math.max(4,W/2-Q.cx*Q.s+4)),Y-3)}
+if(Q.f&&!Q.hm){x2.strokeStyle='#ffb86b';x2.lineWidth=2;x2.beginPath();let pen=0,pv=0;
+for(let px=0;px<=W;px+=2){V.x=(px-W/2)/Q.s+Q.cx;const py=H/2-(Q.f()-Q.cy)*Q.s;if(!isFinite(py)||Math.abs(py)>1e5){pen=0;continue}if(pen&&Math.abs(py-pv)<H)x2.lineTo(px,py);else x2.moveTo(px,py);pen=1;pv=py}x2.stroke()}};
+(function lp(now){if(SC)try{DR[SC](now/1000)}catch(er){}requestAnimationFrame(lp)})(0);
+</script></body></html>
